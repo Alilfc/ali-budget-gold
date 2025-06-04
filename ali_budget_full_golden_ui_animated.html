@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>Ali Budget - Gold Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @font-face {
+      font-family: 'Sukar';
+      src: url('https://cdn.jsdelivr.net/gh/google/fonts/ofl/tajawal/Tajawal-Bold.ttf') format('truetype');
+    }
+    body {
+      font-family: 'Sukar', sans-serif;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+      background: linear-gradient(to bottom, #fffaf0, #fdf6e3);
+      color: #3e2f1c;
+    }
+    header {
+      text-align: center;
+      padding: 1em;
+    }
+    nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: rgba(255, 215, 0, 0.2);
+      backdrop-filter: blur(10px);
+      display: flex;
+      justify-content: space-around;
+      padding: 1em 0;
+      border-top: 1px solid #d4af37;
+    }
+    nav a {
+      text-decoration: none;
+      color: #6b4e16;
+      font-size: 1.2em;
+    }
+    nav a.active {
+      font-weight: bold;
+      color: #3e2f1c;
+    }
+    section {
+      display: none;
+      padding: 1em;
+    }
+    section.active {
+      display: block;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.5);
+      margin: 1em auto;
+      padding: 1em;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      width: 90%;
+    }
+    input, button {
+      width: 90%;
+      margin: 0.5em auto;
+      display: block;
+      padding: 0.7em;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+    }
+    .summary {
+      font-size: 2em;
+      text-align: center;
+      color: #cfa233;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5em 0;
+      border-bottom: 1px solid #ccc;
+    }
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1em;
+    }
+    .category {
+      background: #fff6db;
+      text-align: center;
+      padding: 1.2em;
+      border-radius: 12px;
+      font-size: 1.1em;
+      font-weight: bold;
+      color: #6b4e16;
+    }
+    canvas {
+      max-width: 100%;
+    }
+  
+/* تحسين تجربة المستخدم */
+section {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.4s ease-in-out;
+}
+section.active {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+ul li {
+  animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateX(-10px);}
+  to {opacity: 1; transform: translateX(0);}
+}
+.toast {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: #d4af37;
+  color: white;
+  padding: 0.7em 1em;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 999;
+}
+.toast.show {
+  opacity: 1;
+}
+.category:hover {
+  box-shadow: 0 0 10px #f7d774;
+  transform: scale(1.02);
+  transition: all 0.3s ease;
+}
+
+</style>
+</head>
+<body>
+<div id="toast" class="toast">تمت الإضافة ✔️</div>
+  <header><h1>ميزانية علي 💰</h1></header>
+
+  <!-- الرئيسية -->
+  <section id="home" class="active">
+    <div class="card">
+      <div class="summary" id="total">0 د.ك</div>
+    </div>
+    <div class="card">
+      <input type="text" id="item" placeholder="البند (مثلاً: قهوة)">
+      <input type="number" id="amount" placeholder="المبلغ (مثلاً: 1.500)">
+      <button onclick="addExpense()">إضافة</button>
+      <button onclick="exportPDF()">📄 تصدير PDF</button>
+    </div>
+    <div class="card">
+      <ul id="expense-list"></ul>
+    </div>
+  </section>
+
+  <!-- التقارير -->
+  <section id="reports">
+    <div class="card"><canvas id="pieChart"></canvas></div>
+    <div class="card"><canvas id="barChart"></canvas></div>
+  </section>
+
+  
+<!-- الفئات -->
+<section id="categories">
+  <div class="card categories-grid">
+    <div class="category">
+      <svg width="40" height="40" viewBox="0 0 100 100" style="margin:auto;">
+        <circle cx="50" cy="50" r="40" fill="#d4af37" />
+      </svg>
+      <div>طعام</div>
+    </div>
+    <div class="category">
+      <svg width="40" height="40" viewBox="0 0 100 100" style="margin:auto;">
+        <polygon points="50,10 90,90 10,90" fill="#f7d774"/>
+      </svg>
+      <div>سفر</div>
+    </div>
+    <div class="category">
+      <svg width="40" height="40" viewBox="0 0 100 100" style="margin:auto;">
+        <rect x="20" y="20" width="60" height="60" rx="15" fill="#ffe699"/>
+      </svg>
+      <div>صحة</div>
+    </div>
+    <div class="category">
+      <svg width="40" height="40" viewBox="0 0 100 100" style="margin:auto;">
+        <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="#fff3cd"/>
+      </svg>
+      <div>ترفيه</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- الإعدادات -->
+  <section id="settings">
+    <div class="card">
+      <button onclick="clearData()">🗑 مسح جميع البيانات</button>
+    </div>
+  </section>
+
+  <nav>
+    <a href="#" onclick="showSection('home')" class="active">🏠</a>
+    <a href="#" onclick="showSection('reports')">📊</a>
+    <a href="#" onclick="showSection('categories')">📂</a>
+    <a href="#" onclick="showSection('settings')">⚙️</a>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+      event.target.classList.add('active');
+      if (id === 'reports') drawCharts();
+    }
+
+    function addExpense() {
+      const item = document.getElementById('item').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+      if (!item || isNaN(amount)) return;
+      const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+      expenses.push({ item, amount, date: new Date().toLocaleDateString() });
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+      document.getElementById('item').value = '';
+      document.getElementById('amount').value = '';
+      
+  showToast("تمت الإضافة ✔️");
+  loadExpenses();
+    }
+
+    function loadExpenses() {
+      const list = document.getElementById('expense-list');
+      list.innerHTML = '';
+      const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+      let total = 0;
+      expenses.forEach((e, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${e.item}</span><span>${e.amount.toFixed(3)} د.ك <button onclick="deleteExpense(${i})">❌</button></span>`;
+        list.appendChild(li);
+        total += e.amount;
+      });
+      document.getElementById('total').textContent = total.toFixed(3) + ' د.ك';
+    }
+
+    function deleteExpense(index) {
+      const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+      expenses.splice(index, 1);
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+      
+  showToast("تمت الإضافة ✔️");
+  loadExpenses();
+    }
+
+    function clearData() {
+      localStorage.clear();
+      alert("تم مسح جميع البيانات ✅");
+      
+  showToast("تمت الإضافة ✔️");
+  loadExpenses();
+    }
+
+    function exportPDF() {
+      const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+      let content = 'البند	المبلغ	التاريخ\n';
+      expenses.forEach(e => {
+        content += `${e.item}\t${e.amount} د.ك\t${e.date}\n`;
+      });
+      const blob = new Blob([content], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = "AliBudget_Report.pdf";
+      link.click();
+    }
+
+    function drawCharts() {
+      const data = JSON.parse(localStorage.getItem('expenses') || '[]');
+      const labels = [...new Set(data.map(e => e.item))];
+      const totals = labels.map(label =>
+        data.filter(e => e.item === label).reduce((sum, e) => sum + e.amount, 0)
+      );
+
+      new Chart(document.getElementById('pieChart'), {
+        type: 'pie',
+        data: {
+          labels,
+          datasets: [{
+            data: totals,
+            backgroundColor: ['#d4af37', '#f7d774', '#ffe699', '#fff3cd']
+          }]
+        }
+      });
+
+      new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'المبالغ',
+            data: totals,
+            backgroundColor: '#cfa233'
+          }]
+        }
+      });
+    }
+
+    
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2000);
+}
+
+document.addEventListener("DOMContentLoaded", loadExpenses);
+  </script>
+</body>
+</html>
